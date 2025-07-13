@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kelime Zinciri Çok Oyunculu</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    /* Google Fonts Import: Poppins (modern ve temiz bir font) */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+    /* GENEL AYARLAR VE BODY */
+    body {
+        font-family: 'Poppins', sans-serif; /* Modern ve okunaklı bir font */
+        background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); /* Hafif gradiyent arka plan */
+        color: #334e68; /* Koyu gri, modern metin rengi */
+        max-width: 760px; /* Daha geniş bir ana konteyner */
+        margin: 50px auto;
+        padding: 40px;
+        border-radius: 15px; /* Daha belirgin yuvarlatılmış köşeler */
+        background-color: #ffffff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); /* Daha belirgin ve yaygın bir gölge */
+        transition: all 0.3s ease-in-out; /* Genel geçiş animasyonu */
+        min-height: 100vh; /* Sayfanın en az viewport yüksekliği kadar olması için */
+        display: flex; /* Flexbox kullanarak içeriği dikeyde ortalamak için */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Ana konteynerin içeriği merkeze almak için */
+    body > div {
+        width: 100%;
+        max-width: 600px; /* İçerik için maksimum genişlik */
+        padding: 0; /* body'deki padding'i burada kullanmıyoruz */
+    }
+
+    /* Başlıklar */
+    h1, h3, h4 {
+        text-align: center;
+        color: #2a415b; /* Koyu mavi-gri başlıklar */
+        margin-bottom: 25px; /* Başlık alt boşluğu */
+        letter-spacing: 0.5px; /* Hafif harf aralığı */
+    }
+
+    h1 {
+        font-size: 2.8em;
+        font-weight: 700; /* Daha kalın */
+        color: #007bff; /* Vurgu mavisi */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.05); /* Hafif metin gölgesi */
+    }
+
+    /* Giriş ve seçim alanları */
+    input, select, button {
+        width: 100%;
+        padding: 12px 15px; /* Daha fazla padding */
+        margin: 15px 0;
+        border: 1px solid #c2d1e0; /* Daha yumuşak çerçeve rengi */
+        border-radius: 8px; /* Yuvarlatılmış köşeler */
+        font-size: 1.05rem;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.08); /* Hafif iç gölge */
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    input:focus, select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); /* Odaklandığında mavi parlama */
+        outline: none; /* Varsayılan odak çerçevesini kaldır */
+    }
+
+    /* Butonlar */
+    button {
+        background-image: linear-gradient(to right, #007bff 0%, #0056b3 100%); /* Gradiyent buton */
+        color: white;
+        border: none;
+        font-weight: 600; /* Orta kalınlık */
+        letter-spacing: 0.8px;
+        text-transform: uppercase; /* Büyük harf */
+        cursor: pointer;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3); /* Dış gölge */
+        transition: all 0.3s ease;
+    }
+
+    button:hover {
+        background-position: right center; /* Gradiyent efekti */
+        box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4);
+        transform: translateY(-2px); /* Hafif yukarı kalkma efekti */
+    }
+
+    button:disabled {
+        background-image: none; /* Gradiyenti kaldır */
+        background-color: #cccccc;
+        box-shadow: none;
+        transform: none;
+        cursor: not-allowed;
+        opacity: 0.7; /* Hafif şeffaflık */
+    }
+
+    /* Ayırıcı Çizgi */
+    hr {
+        border: 0;
+        border-top: 1px dashed #aaddff; /* Kesikli açık mavi çizgi */
+        margin: 30px 0;
+    }
+
+    /* Oyuncu listesi (Lobi ve Oyun Sırası) */
+    #playerList, #playerListGame {
+        list-style-type: none;
+        padding: 0;
+        margin: 15px 0;
+        border: 1px solid #e0e6ed;
+        border-radius: 10px;
+        background-color: #fcfdff;
+        max-height: 180px; /* Daha fazla oyuncu için yükseklik */
+        overflow-y: auto;
+        box-shadow: inset 0 1px 5px rgba(0,0,0,0.05); /* Hafif iç gölge */
+    }
+
+    #playerList li, #playerListGame li {
+        padding: 10px 15px;
+        border-bottom: 1px solid #eef2f5;
+        font-size: 0.95rem;
+        color: #4a658a;
+        font-weight: 600;
+    }
+
+    #playerList li:last-child, #playerListGame li:last-child {
+        border-bottom: none;
+    }
+
+    /* Sıra göstergesi */
+    #turnIndicator {
+        text-align: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+        padding: 12px;
+        border-radius: 10px;
+        margin: 20px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: background-color 0.5s ease, color 0.5s ease;
+    }
+
+    #turnIndicator.kirmizi {
+        background-color: #ffcccc;
+        color: #cc0000;
+        border: 1px solid #cc0000;
+    }
+
+    #turnIndicator.mavi {
+        background-color: #cce0ff;
+        color: #004d99;
+        border: 1px solid #004d99;
+    }
+
+    /* Zincir kutuları */
+    #chainDisplay p {
+        background: #fdfdfd;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: 600;
+        font-size: 1.15rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border-left: 5px solid #a8c4db; /* Solunda renkli bir çizgi */
+    }
+
+    #chainDisplay p.correct {
+        background-color: #e6ffe6; /* Daha açık yeşil */
+        color: #008000;
+        border-left-color: #28a745;
+        animation: correctFlash 0.5s ease; /* Doğru tahminde hafif animasyon */
+    }
+
+    @keyframes correctFlash {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.02); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Skor alanı */
+    #scoreBoard {
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.3rem;
+        margin-top: 25px;
+        padding: 10px 0;
+        border-top: 1px dashed #e0e6ed;
+        border-bottom: 1px dashed #e0e6ed;
+        color: #334e68;
+    }
+
+    #scoreBoard span {
+        font-size: 1.4rem;
+        color: #007bff; /* Skor rakamları için vurgu rengi */
+    }
+
+    /* Durum mesajı */
+    #statusMessage {
+        text-align: center;
+        font-weight: 600;
+        margin-top: 25px;
+        min-height: 28px; /* Yeterli yükseklik */
+        padding: 10px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    #statusMessage[style*="color: red"] { /* Hata mesajları için kırmızı arka plan */
+        background-color: #ffe5e5;
+        border: 1px solid #cc0000;
+        color: #cc0000;
+    }
+
+    #statusMessage[style*="color: green"] { /* Başarı mesajları için yeşil arka plan */
+        background-color: #e6ffe6;
+        border: 1px solid #28a745;
+        color: #155724;
+    }
+
+    /* Yardım butonları */
+    #hintButton, #revealButton {
+        padding: 12px 15px;
+        margin-top: 20px;
+        font-weight: 600;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    #hintButton {
+        background-color: #ffc107; /* Canlı sarı */
+        color: #6a4a00; /* Koyu sarı metin */
+        background-image: linear-gradient(to right, #ffc107 0%, #ff8c00 100%);
+    }
+
+    #revealButton {
+        background-color: #dc3545; /* Kırmızı */
+        color: white;
+        background-image: linear-gradient(to right, #dc3545 0%, #b30000 100%);
+    }
+
+    #hintButton:hover {
+        background-position: right center;
+        box-shadow: 0 6px 15px rgba(255, 193, 7, 0.4);
+        transform: translateY(-2px);
+    }
+    #revealButton:hover {
+        background-position: right center;
+        box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
+        transform: translateY(-2px);
+    }
+
+    #hintButton:disabled, #revealButton:disabled {
+        background-image: none;
+        background-color: #e2e3e5;
+        color: #6c757d;
+        box-shadow: none;
+        transform: none;
+    }
+
+    /* Zamanlayıcı stili */
+    #timerDisplay {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #007bff;
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 2px dashed #007bff;
+        border-radius: 10px;
+        background-color: #e6f7ff;
+    }
+
+    /* Yeni Oyun Başlat butonu */
+    #newGameBtn {
+        background-color: #28a745;
+        background-image: linear-gradient(to right, #28a745 0%, #218838 100%);
+        box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+    }
+
+    #newGameBtn:hover {
+        box-shadow: 0 6px 15px rgba(40, 167, 69, 0.4);
+    }
+
+    /* Kurallar bölümü stili */
+    #rulesSection {
+        background-color: #e6f7ff;
+        border: 1px solid #aaddff;
+        border-radius: 10px; /* Daha belirgin yuvarlatma */
+        padding: 20px 25px; /* Daha fazla iç boşluk */
+        margin-bottom: 25px; /* Alt boşluk */
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); /* Hafif gölge */
+    }
+    #rulesSection h3 {
+        color: #0056b3;
+        margin-top: 0;
+        font-size: 1.4em; /* Kural başlığı font boyutu artırıldı */
+        text-align: center;
+        border-bottom: 1px solid #aaddff; /* Alt çizgi */
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    #rulesSection ul {
+        list-style: none; /* Varsayılan madde işaretini kaldır */
+        padding-left: 0;
+        line-height: 1.6; /* Satır aralığı artırıldı */
+        color: #555;
+        font-size: 0.95em; /* Kurallar listesi font boyutu */
+    }
+    #rulesSection ul li {
+        margin-bottom: 10px; /* Listeler arası boşluk artırıldı */
+        position: relative; /* Özel madde işareti için */
+        padding-left: 25px; /* Madde işareti için boşluk */
+    }
+    #rulesSection ul li::before { /* Özel madde işareti */
+        content: '•'; /* Madde işareti karakteri */
+        color: #007bff; /* Mavi renk */
+        font-weight: bold;
+        display: inline-block;
+        width: 1em;
+        margin-left: -1em;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    /* MEDIA QUERIES for Mobile Optimization */
+    @media (max-width: 768px) { /* Tablet ve daha küçük ekranlar */
+        body {
+            margin: 20px auto;
+            padding: 20px; /* Mobil için daha az padding */
+            border-radius: 10px;
+            box-shadow: none; /* Mobil cihazlarda gölgeyi kaldırarak daha temiz görünüm */
+            background: #f0f4f8; /* Tek renk arka plan */
+        }
+
+        h1 {
+            font-size: 2em; /* Daha küçük başlık */
+            margin-bottom: 15px;
+        }
+
+        input, select, button {
+            padding: 10px;
+            font-size: 0.9rem;
+            margin: 8px 0;
+        }
+
+        button {
+            padding: 10px 12px;
+            font-size: 0.9rem;
+        }
+
+        #playerList li, #playerListGame li {
+            font-size: 0.85rem;
+            padding: 8px 10px;
+        }
+
+        #turnIndicator {
+            font-size: 1.1rem;
+            padding: 10px;
+            margin: 15px 0;
+        }
+
+        #chainDisplay p {
+            padding: 8px 12px;
+            font-size: 0.95rem;
+            margin: 8px 0;
+        }
+
+        #scoreBoard {
+            font-size: 1.05rem;
+            margin-top: 15px;
+        }
+
+        #scoreBoard span {
+            font-size: 1.15rem;
+        }
+
+        #hintButton, #revealButton {
+            width: 100%; /* Mobil cihazlarda butonları tam genişlik yap */
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+        #revealButton {
+            margin-left: 0; /* Yan yana durma kaldırıldı */
+        }
+
+        #timerDisplay {
+            font-size: 1.2rem;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+
+        #rulesSection {
+            padding: 15px 18px;
+            margin-bottom: 20px;
+        }
+        #rulesSection h3 {
+            font-size: 1.2em;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        #rulesSection ul li {
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            padding-left: 20px;
+        }
+    }
+
+    @media (max-width: 480px) { /* Telefonlar için daha da özel ayarlar */
+        body {
+            margin: 10px auto;
+            padding: 10px;
+        }
+
+        h1 {
+            font-size: 1.8em;
+        }
+
+        input, select, button {
+            padding: 6px;
+            font-size: 0.85rem;
+            margin: 6px 0;
+        }
+
+        button {
+            padding: 6px 8px;
+            font-size: 0.85rem;
+        }
+
+        #playerList li, #playerListGame li {
+            font-size: 0.75rem;
+            padding: 5px 6px;
+        }
+
+        #turnIndicator {
+            font-size: 1rem;
+            padding: 6px;
+        }
+
+        #chainDisplay p {
+            padding: 5px 8px;
+            font-size: 0.9rem;
+        }
+
+        #scoreBoard {
+            font-size: 0.9rem;
+        }
+        #scoreBoard span {
+            font-size: 1rem;
+        }
+
+        #hintButton, #revealButton {
+            font-size: 0.85rem;
+            padding: 6px 8px;
+        }
+
+        #timerDisplay {
+            font-size: 1rem;
+            padding: 6px;
+        }
+
+        #rulesSection {
+            padding: 10px 12px;
+            margin-bottom: 15px;
+        }
+        #rulesSection h3 {
+            font-size: 1.1em;
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+        }
+        #rulesSection ul li {
+            font-size: 0.75em;
+            margin-bottom: 5px;
+            padding-left: 18px;
+        }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Kelime Zinciri Çok Oyunculu</h1>
+
+  <div id="rulesSection">
+      <h3>Oyun Kuralları</h3>
+      <ul>
+          <li>Oyun iki takımla (Kırmızı ve Mavi) oynanır.</li>
+          <li>Her oyun 8 kelimelik bir "kelime zinciri" ile başlar. İlk kelime açıktır, diğerleri gizlidir (ilk harfi ve alt çizgilerle).</li>
+          <li>Sırası gelen takım, sıradaki gizli kelimeyi tahmin etmeye çalışır.</li>
+          <li>Tahmin edilen kelime, gösterilen ilk harfle başlamalıdır.</li>
+          <li>**Doğru Tahmin:** Kelime doğru tahmin edilirse, kelime açılır ve sıra aynı takımda kalır. Takım 10 puan kazanır. Tüm kelimeler tamamlanırsa, son kelime için ekstra 10 puan (toplam 20) kazanılır.</li>
+          <li>**Yanlış Tahmin:** Kelime yanlış tahmin edilirse veya yanlış harfle başlarsa, sıra diğer takıma geçer. Süre sıfırlanır.</li>
+          <li>**Zaman Sınırı:** Her takımın bir tur için 1 dakikası vardır. Süre dolarsa sıra otomatik olarak diğer takıma geçer ve süre sıfırlanır.</li>
+          <li>**İpucu Kullanma:** Takımın 2 ipucu hakkı vardır. İpucu kullanıldığında, sıradaki kelimenin 2. harfi açılır. Süre veya sıra değişmez. Takımdan 5 puan düşülür.</li>
+          <li>**Kelimeyi Açma:** Takımın 2 kelime açma hakkı vardır. Kelime açıldığında, sıradaki kelime tamamen açılır. Süre veya sıra değişmez. Takımdan 10 puan düşülür.</li>
+          <li>Oyun, tüm kelimeler doğru tahmin edildiğinde biter. En yüksek puana sahip takım kazanır.</li>
+      </ul>
+  </div>
+
+  <div id="joinForm">
+    <label>Oda ID (örn: room123):</label>
+    <input type="text" id="roomIdInput" placeholder="Oda ID girin" />
+
+    <label>Adınız:</label>
+    <input type="text" id="usernameInput" placeholder="İsminizi girin" />
+
+    <label>Takım Seçin:</label>
+    <select id="teamSelect">
+      <option value="kirmizi">🔴 Kırmızı</option>
+      <option value="mavi">🔵 Mavi</option>
+    </select>
+
+    <button id="joinBtn">Odaya Katıl / Oluştur</button>
+  </div>
+
+  <div id="lobby" style="display:none;">
+    <h3>Oda: <span id="currentRoomIdDisplay"></span></h3>
+    <h4>Oyuncular:</h4>
+    <ul id="playerList"></ul>
+    <button id="startGameBtn" disabled>Oyunu Başlat</button>
+  </div>
+
+  <div id="gameArea" style="display:none;">
+    <h3>Kelime Zinciri</h3>
+    <div id="timerDisplay"></div>
+    <div id="turnIndicator"></div>
+    <div id="chainDisplay"></div>
+
+    <h4>Aktif Oyuncular:</h4>
+    <ul id="playerListGame"></ul>
+
+
+    <label>Tahmininiz (baş harfi görünen kelimeyi tamamlayın):</label>
+    <input type="text" id="guessInput" autocomplete="off" />
+    <button id="submitGuessBtn">Tahmin Gönder</button>
+
+    <div style="display:flex; justify-content: space-between;">
+      <button id="hintButton" disabled>İpucu Kullan (2 hakkınız var)</button>
+      <button id="revealButton" disabled>Kelimeyi Aç (2 hakkınız var)</button>
+    </div>
+
+    <div id="scoreBoard">
+      🔴 Kırmızı: <span id="scoreKirmizi">0</span> | 🔵 Mavi: <span id="scoreMavi">0</span>
+    </div>
+
+    <div id="statusMessage"></div>
+    <button id="newGameBtn" style="margin-top:15px; background:#28a745; color:#fff; display:none;">Yeni Oyun Başlat</button>
+
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAakIndhM83k5tuXtuel5-WOCah0nqWrZ4",
+      authDomain: "kelime-zinciri-5c998.firebaseapp.com",
+      databaseURL: "https://kelime-zinciri-5c998-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "kelime-zinciri-5c998",
+      storageBucket: "kelime-zinciri-5c998.appspot.com",
+      messagingSenderId: "708438070367",
+      appId: "1:708438070367:web:5b0b9684b942aaa07477ea"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Global değişkenler
+    let currentRoomId = null;
+    let playerId = null;
+    let playerTeam = null;
+    let currentTurn = null;
+    let currentChain = [];
+    let originalChain = [];
+    let guesses = {};
+    let hintsLeft = { kirmizi: 2, mavi: 2 };
+    let revealsLeft = { kirmizi: 2, mavi: 2 };
+    let scores = { kirmizi: 0, mavi: 0 };
+    let wordGraph = {};
+
+    let turnTimerInterval = null;
+    const defaultTimerDuration = 60; // Her tur 60 saniye (1 dakika)
+
+    // UI elementleri referansları
+    const joinForm = document.getElementById('joinForm');
+    const lobby = document.getElementById('lobby');
+    const gameArea = document.getElementById('gameArea');
+    const playerListElLobby = document.getElementById('playerList');
+    const playerListElGame = document.getElementById('playerListGame');
+    const currentRoomIdDisplay = document.getElementById('currentRoomIdDisplay');
+    const turnIndicator = document.getElementById('turnIndicator');
+    const chainDisplay = document.getElementById('chainDisplay');
+    const guessInput = document.getElementById('guessInput');
+    const submitGuessBtn = document.getElementById('submitGuessBtn');
+    const hintButton = document.getElementById('hintButton');
+    const revealButton = document.getElementById('revealButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const newGameBtn = document.getElementById('newGameBtn');
+    const scoreKirmiziEl = document.getElementById('scoreKirmizi');
+    const scoreMaviEl = document.getElementById('scoreMavi');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const rulesSection = document.getElementById('rulesSection');
+
+
+    // Yardımcı fonksiyonlar
+    function setStatus(msg, isError = false) {
+      statusMessage.textContent = msg;
+      statusMessage.style.color = isError ? 'red' : 'green';
+    }
+
+    function updateScoreUI() {
+      scoreKirmiziEl.textContent = scores.kirmizi;
+      scoreMaviEl.textContent = scores.mavi;
+    }
+
+    function updateHintRevealButtons() {
+      const isMyTurn = playerTeam === currentTurn;
+      hintButton.disabled = !isMyTurn || (hintsLeft[playerTeam] <= 0);
+      revealButton.disabled = !isMyTurn || (revealsLeft[playerTeam] <= 0);
+      hintButton.textContent = `İpucu Kullan (${hintsLeft[playerTeam]} hakkınız var)`;
+      revealButton.textContent = `Kelimeyi Aç (${revealsLeft[playerTeam]} hakkınız var)`;
+    }
+
+    // Kelime zinciri oluşturma fonksiyonu
+    function createChain(graph, startWord, length = 8) {
+      let chain = [startWord];
+      let used = new Set([startWord]);
+      let current = startWord;
+
+      for (let i = 1; i < length; i++) {
+        const nextWords = graph[current];
+        if (!nextWords || nextWords.length === 0) break;
+
+        const filtered = nextWords.filter(w => graph.hasOwnProperty(w) && !used.has(w));
+        if (filtered.length === 0) break;
+
+        current = filtered[Math.floor(Math.random() * filtered.length)];
+        chain.push(current);
+        used.add(current);
+      }
+      return chain;
+    }
+
+    function createChainWithRetries(graph, length = 8, retries = 50) {
+      const keys = Object.keys(graph);
+      if (keys.length === 0) return [];
+
+      for (let i = 0; i < retries; i++) {
+        const start = keys[Math.floor(Math.random() * keys.length)];
+        const chain = createChain(graph, start, length);
+        if (chain.length === length) return chain;
+      }
+      return [];
+    }
+
+    // Firebase dinleyicileri
+    function listenRoom() {
+      if (!currentRoomId) return;
+
+      // Oyuncu listesi dinleyicisi (hem lobide hem de oyun alanında güncel tutar)
+      db.ref(`rooms/${currentRoomId}/players`).on('value', snapshot => {
+        const players = snapshot.val() || {};
+        playerListElLobby.innerHTML = '';
+        playerListElGame.innerHTML = '';
+        Object.entries(players).forEach(([id, player]) => {
+          const liLobby = document.createElement('li');
+          liLobby.textContent = `${player.name} (${player.team === 'kirmizi' ? '🔴 Kırmızı' : '🔵 Mavi'})`;
+          playerListElLobby.appendChild(liLobby);
+
+          const liGame = document.createElement('li');
+          liGame.textContent = `${player.name} (${player.team === 'kirmizi' ? '🔴 Kırmızı' : '🔵 Mavi'})`;
+          playerListElGame.appendChild(liGame);
+        });
+        startGameBtn.disabled = Object.keys(players).length < 1;
+      });
+
+      // Oyun durumu dinleyicisi
+      db.ref(`rooms/${currentRoomId}/gameState`).on('value', snapshot => {
+        const state = snapshot.val();
+
+        if (!state || state.status !== 'playing') {
+          rulesSection.style.display = 'block'; // Oyun bitince kuralları tekrar göster
+          joinForm.style.display = 'block'; // Oyun bitince katılma formunu tekrar göster
+
+          gameArea.style.display = 'none';
+          lobby.style.display = 'block';
+          turnIndicator.style.display = 'none';
+          timerDisplay.style.display = 'none';
+          newGameBtn.style.display = 'block';
+
+          if (turnTimerInterval) {
+              clearInterval(turnTimerInterval);
+              turnTimerInterval = null;
+          }
+
+          if (!state) {
+            currentChain = [];
+            originalChain = [];
+            guesses = {};
+            currentTurn = null;
+            hintsLeft = { kirmizi: 2, mavi: 2 };
+            revealsLeft = { kirmizi: 2, mavi: 2 };
+            scores = { kirmizi: 0, mavi: 0 };
+            setStatus('Oyun başlamadı. Başlamak için "Oyunu Başlat" butonuna basın.', false);
+          } else if (state.status === 'finished') {
+            const winnerTeam = state.winner;
+            if (winnerTeam) {
+                const winnerName = winnerTeam === 'kirmizi' ? '🔴 Kırmızı Takım' : '🔵 Mavi Takım';
+                setStatus(`Oyun bitti! Kazanan: ${winnerName}`, false);
+                alert(`Oyun Bitti! Kazanan: ${winnerName}`); // Alert ile de göster
+            } else {
+                setStatus('Oyun bitti!', false);
+            }
+          }
+          return;
+        }
+
+        // Oyun oynanıyorsa, kurallar ve katılma formunu gizle
+        rulesSection.style.display = 'none';
+        joinForm.style.display = 'none';
+
+        lobby.style.display = 'none';
+        gameArea.style.display = 'block';
+        turnIndicator.style.display = 'block';
+        timerDisplay.style.display = 'block';
+        newGameBtn.style.display = 'none';
+
+        currentChain = state.chain || [];
+        originalChain = state.originalChain || [];
+        guesses = state.guesses || {};
+        currentTurn = state.currentTurn;
+        hintsLeft = state.hintsLeft || { kirmizi: 2, mavi: 2 };
+        revealsLeft = state.revealsLeft || { kirmizi: 2, mavi: 2 };
+        scores = state.scores || { kirmizi: 0, mavi: 0 };
+        const timerStartTime = state.timerStartTime || Date.now();
+        const timerDuration = state.timerDuration || defaultTimerDuration;
+
+
+        renderChain();
+        updateTurnUI();
+        updateHintRevealButtons();
+        updateScoreUI();
+        setStatus('');
+
+        const isMyTurn = playerTeam === currentTurn;
+        guessInput.disabled = !isMyTurn;
+        submitGuessBtn.disabled = !isMyTurn;
+
+        startTurnTimer(timerStartTime, timerDuration, currentTurn); 
+      });
+    }
+
+    // Zamanlayıcıyı başlatma fonksiyonu
+    function startTurnTimer(startTime, duration, currentTurnOnStart) {
+        if (turnTimerInterval) {
+            clearInterval(turnTimerInterval);
+        }
+
+        turnTimerInterval = setInterval(() => {
+            const elapsedTime = (Date.now() - startTime) / 1000;
+            const remainingTime = Math.max(0, duration - Math.floor(elapsedTime));
+
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            timerDisplay.textContent = `Kalan Süre: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            if (remainingTime <= 0) {
+                clearInterval(turnTimerInterval);
+                turnTimerInterval = null;
+                // Süre dolduğunda sırayı değiştirmek için Firebase'i güncelle
+                db.ref(`rooms/${currentRoomId}/gameState`).transaction(gameState => {
+                    // Transaction içinde, Firebase'deki mevcut sıra, zamanlayıcının başladığı sırayla aynıysa değiştir
+                    if (gameState && gameState.status === 'playing' && gameState.currentTurn === currentTurnOnStart) {
+                        const nextTurn = currentTurnOnStart === 'kirmizi' ? 'mavi' : 'kirmizi';
+                        gameState.currentTurn = nextTurn;
+                        gameState.timerStartTime = Date.now(); // Yeni turun zamanlayıcısını sıfırla
+                        setStatus(`Süre doldu! Sıra ${nextTurn === 'kirmizi' ? '🔴 Kırmızı' : '🔵 Mavi'} Takım'a geçti.`, true);
+                        return gameState;
+                    }
+                    return; // Eğer sıra zaten başka bir oyuncu tarafından değiştirilmişse veya oyun durumu geçerli değilse
+                });
+            }
+        }, 1000);
+    }
+
+
+    function renderChain() {
+      chainDisplay.innerHTML = '';
+      for (let i = 0; i < currentChain.length; i++) {
+        const p = document.createElement('p');
+        if (guesses.hasOwnProperty(i)) {
+          p.textContent = `${i + 1}. ${originalChain[i]}`;
+          p.classList.add('correct');
+        } else {
+          p.textContent = `${i + 1}. ${currentChain[i]}`;
+        }
+        chainDisplay.appendChild(p);
+      }
+    }
+
+    function updateTurnUI() {
+      if (!currentTurn) {
+        turnIndicator.style.display = 'none';
+        return;
+      }
+      turnIndicator.textContent = `Sıra: ${currentTurn === 'kirmizi' ? '🔴 Kırmızı Takım' : '🔵 Mavi Takım'}`;
+      turnIndicator.className = currentTurn;
+      turnIndicator.style.display = 'block';
+    }
+
+    // --- ANA OYUN MANTIĞI FONKSİYONLARI ---
+    async function handleGuess() {
+      const guess = guessInput.value.trim().toLowerCase();
+      if (!guess) return setStatus('Lütfen tahmin girin!', true);
+      if (!currentRoomId) return setStatus('Odaya bağlı değilsiniz!', true);
+      if (playerTeam !== currentTurn) return setStatus('Sıra sizde değil.', true);
+
+      try {
+        await db.ref(`rooms/${currentRoomId}/gameState`).transaction(gameState => {
+          if (!gameState || gameState.status !== 'playing' || !gameState.originalChain || !Array.isArray(gameState.originalChain)) {
+            console.warn('Transaction iptal edildi: Geçersiz gameState veya oyun durumu.');
+            return;
+          }
+
+          gameState.guesses = gameState.guesses || {};
+          const nextIndex = Object.keys(gameState.guesses).length; 
+          const correctWord = gameState.originalChain[nextIndex];
+
+          if (!correctWord) {
+            gameState.status = 'finished';
+            return gameState;
+          }
+
+          if (guess.charAt(0) !== correctWord.charAt(0)) {
+            setStatus(`Yanlış harf! Kelime '${correctWord.charAt(0)}' ile başlamalıydı. Sıra diğer takıma geçti.`, true);
+            gameState.currentTurn = (gameState.currentTurn === 'kirmizi' ? 'mavi' : 'kirmizi');
+            gameState.timerStartTime = Date.now(); // Yanlış tahminde sıra değişince zamanlayıcıyı sıfırla
+            return gameState;
+          }
+
+          if (guess === correctWord.toLowerCase()) {
+            gameState.guesses[nextIndex] = correctWord;
+            gameState.chain[nextIndex] = correctWord;
+
+            gameState.scores = gameState.scores || { kirmizi: 0, mavi: 0 };
+            gameState.scores[playerTeam] = (gameState.scores[playerTeam] || 0) + 10;
+
+            if (Object.keys(gameState.guesses).length === gameState.originalChain.length) {
+              gameState.status = 'finished';
+              gameState.winner = playerTeam; // Kazananı set et
+              setStatus(`Oyun bitti! Kazanan: ${playerTeam === 'kirmizi' ? '🔴 Kırmızı' : '🔵 Mavi'} Takım`, false);
+            } else {
+              setStatus('Doğru tahmin! Devam edin.', false);
+              // Doğru tahminde zamanlayıcı SIFIRLANMAYACAK, sıra aynı takımda kalacak
+            }
+          } else {
+            setStatus('Yanlış tahmin! Sıra diğer takıma geçti.', true);
+            gameState.currentTurn = (gameState.currentTurn === 'kirmizi' ? 'mavi' : 'kirmizi');
+            gameState.timerStartTime = Date.now(); // Yanlış tahminde zamanlayıcıyı sıfırla
+          }
+          return gameState;
+        });
+        guessInput.value = '';
+      } catch (err) {
+        console.error('Tahmin gönderme hatası:', err);
+        setStatus('Tahmin gönderme hatası: ' + err.message, true);
+      }
+    };
+
+
+    // İpucu kullanma butonu click handler
+    async function useHint() {
+      if (!currentRoomId) return setStatus('Odaya bağlı değilsiniz!', true);
+      if (playerTeam !== currentTurn) return setStatus('Sıra sizde değil.', true);
+      if (hintsLeft[playerTeam] <= 0) return setStatus('İpucu hakkınız kalmadı.', true);
+
+      try {
+        await db.ref(`rooms/${currentRoomId}/gameState`).transaction(gameState => {
+          if (!gameState || gameState.status !== 'playing' || !gameState.chain || !Array.isArray(gameState.chain) || !gameState.originalChain || !Array.isArray(gameState.originalChain) || !gameState.hintsLeft) {
+            console.warn('Transaction iptal edildi: Geçersiz gameState veya oyun durumu.');
+            return;
+          }
+
+          gameState.guesses = gameState.guesses || {};
+          const nextIndex = Object.keys(gameState.guesses).length; // Tahmin edilmesi gereken kelimenin indeksi
+
+          const wordToHint = gameState.originalChain[nextIndex];
+          if (!wordToHint) {
+            setStatus('Tahmin edilecek kelime kalmadı.', true);
+            return;
+          }
+
+          if (wordToHint.length < 2) {
+            setStatus('Kelime çok kısa, ipucu verilemiyor.', true);
+            return;
+          }
+
+          // İpucu kontrolü: Kelimenin ikinci harfi zaten açık mı? (Alt çizgi formatına göre)
+          // currentChain[nextIndex] -> 'A_ _ _' ise ikinci karakter boşluktur.
+          // currentChain[nextIndex][1] === wordToHint[1] -> 'l' ise, ikinci harf açılmış demektir.
+          // Bu mantıkla, eğer ikinci karakter boşluk değilse ve orijinal kelimenin ikinci karakterine eşitse, zaten açıktır.
+          // Veya basitçe alt çizgi içermiyorsa kelime zaten açık veya kısmen açık olabilir.
+          if (!gameState.chain[nextIndex].includes('_')) { // Kelime tamamen açık mı kontrolü
+              setStatus('Kelime zaten tamamen açık.', true);
+              return;
+          }
+          // Eğer kelime formatı A_ _ _ ve ikinci karakteri henüz gizli ise (yani boşluk veya alt çizgi)
+          // ve orijinal kelimenin ikinci harfi ile eşleşmiyor ise (yani ilk ipucu henüz verilmemişse)
+          // veya daha basiti: eğer mevcut gösterilen kelime orijinal kelime değilse ve hala alt çizgi içeriyorsa
+          if (gameState.chain[nextIndex][1] === '_') { // İkinci karakter hala gizliyse
+            // İpucu uygula: 2. harfi aç
+            gameState.chain[nextIndex] = wordToHint[0] + wordToHint[1] + '_ '.repeat(wordToHint.length - 2).trim();
+            gameState.hintsLeft[playerTeam]--;
+            gameState.scores = gameState.scores || {kirmizi:0, mavi:0};
+            gameState.scores[playerTeam] = Math.max(0, (gameState.scores[playerTeam] || 0) - 5);
+
+            // İpucu kullanıldığında SÜRE SIFIRLANMAYACAK ve SIRA DEĞİŞMEYECEK
+            setStatus('İpucu kullanıldı: 2. harf açıldı.', false);
+            return gameState;
+          }
+
+          // Eğer kelime A_ _ _ formatında değilse veya ipucu zaten kullanılmışsa (örn: "Ap_ _")
+          setStatus('2. harf zaten açık veya kelime açıldı.', true);
+          return;
+        });
+      } catch (err) {
+        console.error('İpucu kullanma hatası:', err);
+        setStatus('İpucu kullanma hatası: ' + err.message, true);
+      }
+    };
+
+    // Kelime açma butonu click handler
+    async function revealWord() {
+      if (!currentRoomId) return setStatus('Odaya bağlı değilsiniz!', true);
+      if (playerTeam !== currentTurn) return setStatus('Sıra sizde değil.', true);
+      if (revealsLeft[playerTeam] <= 0) return setStatus('Kelime açma hakkınız kalmadı.', true);
+
+      try {
+        await db.ref(`rooms/${currentRoomId}/gameState`).transaction(gameState => {
+          if (!gameState || gameState.status !== 'playing' || !gameState.chain || !Array.isArray(gameState.chain) || !gameState.originalChain || !Array.isArray(gameState.originalChain) || !gameState.revealsLeft || !gameState.guesses) {
+            console.warn('Transaction iptal edildi: Geçersiz gameState veya oyun durumu.');
+            return;
+          }
+
+          gameState.guesses = gameState.guesses || {};
+          const nextIndex = Object.keys(gameState.guesses).length;
+          const wordToReveal = gameState.originalChain[nextIndex];
+
+          if (!wordToReveal) {
+            setStatus('Tahmin edilecek kelime kalmadı.', true);
+            return;
+          }
+
+          // Kelime zaten tamamen açıksa (tahmin edilmişse veya önceden açılmışsa)
+          if (gameState.chain[nextIndex] === wordToReveal) {
+              setStatus('Kelime zaten tamamen açık.', true);
+              return;
+          }
+
+          gameState.chain[nextIndex] = wordToReveal;
+          gameState.guesses[nextIndex] = wordToReveal;
+          gameState.revealsLeft[playerTeam]--;
+
+          gameState.scores = gameState.scores || {kirmizi:0, mavi:0};
+          gameState.scores[playerTeam] = Math.max(0, (gameState.scores[playerTeam] || 0) - 10);
+
+          // Kelime açıldığında SÜRE SIFIRLANMAYACAK ve SIRA DEĞİŞMEYECEK
+          // gameState.currentTurn = (gameState.currentTurn === 'kirmizi' ? 'mavi' : 'kirmizi'); // BU SATIR KALDIRILDI
+          // gameState.timerStartTime = Date.now(); // BU SATIR KALDIRILDI
+
+          if (Object.keys(gameState.guesses).length === gameState.originalChain.length) {
+            gameState.status = 'finished';
+            gameState.winner = playerTeam;
+            setStatus(`Oyun bitti! Kazanan: ${playerTeam === 'kirmizi' ? '🔴 Kırmızı' : '🔵 Mavi'} Takım`, false);
+          } else {
+            setStatus('Kelime açıldı!', false); // Sıra değişmediği için mesaj güncellendi
+          }
+          return gameState;
+        });
+      } catch (err) {
+        console.error('Kelime açma hatası:', err);
+        setStatus('Kelime açma hatası: ' + err.message, true);
+      }
+    };
+
+    // `newGameBtn` click handler (ayrıca startGameBtn'e de atanacak)
+    async function startNewGame() {
+      if (!currentRoomId) return setStatus('Önce odaya katılın!', true);
+
+      try {
+        const playersSnap = await db.ref(`rooms/${currentRoomId}/players`).once('value');
+        if (!playersSnap.exists() || Object.keys(playersSnap.val()).length < 1) {
+          setStatus('Oyuncu bulunamadı. Lütfen odayı yeniden oluşturun veya en az 1 oyuncu olduğundan emin olun.', true);
+          return;
+        }
+        if (!wordGraph || Object.keys(wordGraph).length === 0) {
+          setStatus('Kelime grafiği yüklenmedi. Sayfayı yenileyin.', true);
+          return;
+        }
+
+        await db.ref(`rooms/${currentRoomId}/gameState`).remove();
+        await new Promise(resolve => setTimeout(resolve, 300)); 
+
+        let chain = createChainWithRetries(wordGraph, 8);
+        if (chain.length === 0) {
+          setStatus('Yeterli kelime ilişkisi bulunamadı veya zincir oluşturulamadı. JSON dosyasını kontrol edin.', true);
+          return;
+        }
+
+        const hiddenChain = chain.map((w, i) => {
+          if (i === 0) return w;
+          // Gizli kelime formatı (alt çizgilere geri döndü)
+          return w[0] + '_ '.repeat(w.length - 1).trim(); 
+        });
+
+        await db.ref(`rooms/${currentRoomId}/gameState`).set({
+          status: 'playing',
+          chain: hiddenChain,
+          originalChain: chain,
+          guesses: {},
+          currentTurn: 'kirmizi',
+          hintsLeft: { kirmizi: 2, mavi: 2 },
+          revealsLeft: { kirmizi: 2, mavi: 2 },
+          scores: { kirmizi: 0, mavi: 0 },
+          winner: null,
+          timerStartTime: Date.now(), // Zamanlayıcı başlangıç zamanı
+          timerDuration: defaultTimerDuration
+        });
+
+        setStatus('Yeni oyun başlatıldı!', false);
+
+      } catch (err) {
+        alert('Yeni oyun başlatma hatası: ' + err.message);
+      }
+    }
+
+
+    // Sayfa yüklendiğinde URL'deki oda ID'sini kontrol et ve kelime grafiğini yükle
+    document.addEventListener('DOMContentLoaded', () => {
+      // Input alanlarına ve butonlara olay dinleyicileri ata
+      document.getElementById('joinBtn').addEventListener('click', async () => {
+        const roomIdVal = document.getElementById('roomIdInput').value.trim();
+        const usernameVal = document.getElementById('usernameInput').value.trim();
+        const teamVal = document.getElementById('teamSelect').value;
+
+        if (!roomIdVal || !usernameVal) {
+          alert('Lütfen oda ID ve isminizi girin!');
+          return;
+        }
+
+        currentRoomId = roomIdVal;
+        playerTeam = teamVal;
+        playerId = 'p_' + Math.random().toString(36).substring(2, 10);
+
+        try {
+          await db.ref(`rooms/${currentRoomId}/players/${playerId}`).set({
+            name: usernameVal,
+            team: playerTeam
+          });
+
+          currentRoomIdDisplay.textContent = currentRoomId;
+          joinForm.style.display = 'none';
+          lobby.style.display = 'block';
+          gameArea.style.display = 'none';
+          // Oyuna katılırken kuralları gizle
+          rulesSection.style.display = 'none'; 
+          setStatus('Odaya katıldınız. Oyun başlamayı bekleyin.', false);
+
+          listenRoom();
+
+        } catch (err) {
+          alert('Odaya katılırken hata: ' + err.message);
+        }
+      });
+
+      // startGameBtn click handler
+      startGameBtn.addEventListener('click', startNewGame);
+
+      // submitGuessBtn click handler
+      submitGuessBtn.addEventListener('click', handleGuess);
+
+      // hintButton click handler
+      hintButton.addEventListener('click', useHint);
+
+      // revealButton click handler
+      revealButton.addEventListener('click', revealWord);
+
+      // newGameBtn click handler
+      newGameBtn.addEventListener('click', startNewGame); // startNewGame ile aynı işlevi görür
+
+      // Enter tuşuyla tahmin gönderme
+      if (guessInput) {
+        guessInput.addEventListener('keypress', function(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault(); // Varsayılan Enter davranışını engelle
+            submitGuessBtn.click(); // Programatik olarak butonu tıkla
+          }
+        });
+      }
+
+      // URL'den oda ID'si varsa inputu doldur
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomFromUrl = urlParams.get('room');
+      if (roomFromUrl) {
+        document.getElementById('roomIdInput').value = roomFromUrl;
+      }
+
+      // Kelime grafiği JSON dosyasını yükle
+      fetch('wordGraph_2000.json')
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP Hata! Durum: ${res.status} - ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          wordGraph = data;
+          console.log("Kelime grafiği başarıyla yüklendi. Toplam kelime sayısı:", Object.keys(wordGraph).length);
+          if (Object.keys(wordGraph).length === 0) {
+            setStatus("Kelime grafiği boş yüklendi. wordGraph_2000.json dosyanızda kelime ve ilişki tanımları olduğundan emin olun.", true);
+          }
+        })
+        .catch(err => {
+          console.error("Kelime grafiği yükleme hatası:", err);
+          setStatus("Kelime grafiği yüklenemedi! wordGraph_2000.json dosyasının doğru yolda olduğundan ve geçerli bir JSON formatında olduğundan emin olun.", true);
+        });
+    });
+
+        #guessHistory {
+            background-color: #f8fafc;
+            border: 1px solid #e0e6ed;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        #guessHistory h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #2a415b;
+            text-align: center;
+            border-bottom: 1px solid #aaddff;
+            padding-bottom: 8px;
+        }
+
+        #guessHistoryList {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #guessHistoryList li {
+            padding: 8px 10px;
+            font-size: 0.95rem;
+            color: #4a658a;
+            border-bottom: 1px solid #eef2f5;
+        }
+
+        #guessHistoryList li:last-child {
+            border-bottom: none;
+        }
+
+        #guessHistoryList li.correct {
+            background-color: #e6ffe6;
+            color: #155724;
+        }
+
+        #guessHistoryList li.incorrect {
+            background-color: #ffe5e5;
+            color: #cc0000;
+        }
+
+        /* Mobil cihazlar için optimizasyon */
+        @media (max-width: 768px) {
+            #guessHistory {
+                margin: 15px 0;
+                padding: 10px;
+                max-height: 200px;
+            }
+
+            #guessHistory h4 {
+                font-size: 1em;
+            }
+
+            #guessHistoryList li {
+                font-size: 0.85rem;
+                padding: 6px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #guessHistory {
+                margin: 10px 0;
+                padding: 8px;
+                max-height: 150px;
+            }
+
+            #guessHistory h4 {
+                font-size: 0.9em;
+            }
+
+            #guessHistoryList li {
+                font-size: 0.75rem;
+                padding: 5px 6px;
+            }
+        }
+        /* gameArea için iki sütunlu düzen */
+        #gameArea {
+          width: 100%;
+          max-width: 760px;
+          padding: 20px;
+        }
+
+        .game-container {
+          display: flex;
+          gap: 20px;
+        }
+
+        .game-content {
+          flex: 1;
+        }
+
+        #guessHistory {
+          width: 250px;
+          background-color: #f8fafc;
+          border: 1px solid #e0e6ed;
+          border-radius: 10px;
+          padding: 15px;
+          max-height: 400px;
+          overflow-y: auto;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        #guessHistory h4 {
+          margin: 0 0 10px 0;
+          font-size: 1.2em;
+          color: #2a415b;
+          text-align: center;
+          border-bottom: 1px solid #aaddff;
+          padding-bottom: 8px;
+        }
+
+        #guessHistoryList {
+          list-style-type: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        #guessHistoryList li {
+          padding: 8px 10px;
+          font-size: 0.95rem;
+          color: #4a658a;
+          border-bottom: 1px solid #eef2f5;
+        }
+
+        #guessHistoryList li:last-child {
+          border-bottom: none;
+        }
+
+        #guessHistoryList li.correct {
+          background-color: #e6ffe6;
+          color: #155724;
+        }
+
+        #guessHistoryList li.incorrect {
+          background-color: #ffe5e5;
+          color: #cc0000;
+        }
+
+        @media (max-width: 768px) {
+          .game-container {
+            flex-direction: column;
+          }
+
+          #guessHistory {
+            width: 100%;
+            margin: 15px 0;
+            padding: 10px;
+            max-height: 200px;
+          }
+
+          #guessHistory h4 {
+            font-size: 1em;
+          }
+
+          #guessHistoryList li {
+            font-size: 0.85rem;
+            padding: 6px 8px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          #guessHistory {
+            margin: 10px 0;
+            padding: 8px;
+            max-height: 150px;
+          }
+
+          #guessHistory h4 {
+            font-size: 0.9em;
+          }
+
+          #guessHistoryList li {
+            font-size: 0.75rem;
+            padding: 5px 6px;
+          }
+        }
+  </script>
+</body>
+</html>

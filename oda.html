@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kelime Zinciri Oyunu</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 360px;
+      text-align: center;
+    }
+    #wordList p {
+      font-size: 18px;
+      margin: 10px 0;
+      user-select: none;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      min-height: 24px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Kelime Zinciri</h2>
+    <div id="wordList" aria-live="polite"></div>
+    <input
+      type="text"
+      id="guessInput"
+      placeholder="Tahmininizi yazın"
+      autocomplete="off"
+      aria-label="Tahmininizi yazın"
+    />
+    <button type="button" id="submitBtn" aria-label="Tahmini gönder">Gönder</button>
+    <p id="result" role="alert" aria-live="assertive"></p>
+  </div>
+
+  <script>
+    // Kelimeler havuzu
+    const words = ["piyano", "tuş", "klavye", "bilgisayar", "internet", "sosyal", "takipçi", "fenomen"];
+    let currentIndex = 0;
+
+    const wordList = document.getElementById("wordList");
+    const guessInput = document.getElementById("guessInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const result = document.getElementById("result");
+    let resultTimeout = null;
+
+    function displayWords() {
+      wordList.innerHTML = "";
+      words.forEach((word, index) => {
+        if (index < currentIndex) {
+          // Önceki kelimeler tamamen açık
+          wordList.innerHTML += `<p>${index + 1}. ${word}</p>`;
+        } else if (index === 0) {
+          // 1. kelime tam açık
+          wordList.innerHTML += `<p>1. ${words[0]}</p>`;
+        } else {
+          // 1. kelimeden sonraki tüm kelimeler sadece baş harf + noktalar
+          const hiddenWord = word[0] + ".".repeat(word.length - 1);
+          wordList.innerHTML += `<p>${index + 1}. ${hiddenWord}</p>`;
+        }
+      });
+    }
+
+
+    function clearResultMessage() {
+      if (resultTimeout) clearTimeout(resultTimeout);
+      resultTimeout = setTimeout(() => {
+        result.textContent = "";
+      }, 2000);
+    }
+
+    function submitGuess() {
+      const inputVal = guessInput.value.trim().toLocaleLowerCase("tr-TR");
+      if (!inputVal) {
+        result.textContent = "Lütfen tahmininizi yazın.";
+        clearResultMessage();
+        return;
+      }
+
+      if (inputVal === words[currentIndex]) {
+        currentIndex++;
+        if (currentIndex === words.length) {
+          result.textContent = "🎉 Tebrikler! Tüm kelimeleri doğru tahmin ettiniz!";
+          guessInput.disabled = true;
+          submitBtn.disabled = true;
+        } else {
+          result.textContent = "✅ Doğru!";
+        }
+      } else {
+        result.textContent = "❌ Yanlış tahmin, tekrar deneyin.";
+      }
+
+      guessInput.value = "";
+      displayWords();
+      guessInput.focus();
+      clearResultMessage();
+    }
+
+    // Enter tuşu ile gönderme
+    guessInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        submitGuess();
+      }
+    });
+
+    submitBtn.addEventListener("click", submitGuess);
+
+    // Sayfa yüklendiğinde kelimeleri göster
+    displayWords();
+    guessInput.focus();
+  </script>
+  
+</body>
+</html>
